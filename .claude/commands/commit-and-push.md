@@ -9,5 +9,5 @@
 
 - [변경사항에 대한 세부 내용]
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: [모델이 있는 경우 모델명]
 </commit_template>
