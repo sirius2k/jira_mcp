@@ -23,7 +23,7 @@ def get_client() -> JiraClient:
     return client
 
 
-@server.list_tools()
+@server.list_tools()  # type: ignore[untyped-decorator, no-untyped-call]
 async def list_tools() -> list[Tool]:
     """List available Jira tools."""
     return [
@@ -45,7 +45,11 @@ async def list_tools() -> list[Tool]:
                 "type": "object",
                 "properties": {
                     "jql": {"type": "string", "description": "JQL query string"},
-                    "max_results": {"type": "integer", "description": "Maximum results to return", "default": 50},
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maximum results to return",
+                        "default": 50,
+                    },
                 },
                 "required": ["jql"],
             },
@@ -58,7 +62,10 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "project_key": {"type": "string", "description": "Project key (e.g., PROJ)"},
                     "summary": {"type": "string", "description": "Issue summary/title"},
-                    "issue_type": {"type": "string", "description": "Issue type (e.g., Bug, Task, Story)"},
+                    "issue_type": {
+                        "type": "string",
+                        "description": "Issue type (e.g., Bug, Task, Story)",
+                    },
                     "description": {"type": "string", "description": "Issue description"},
                 },
                 "required": ["project_key", "summary", "issue_type"],
@@ -70,7 +77,10 @@ async def list_tools() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "issue_key": {"type": "string", "description": "The issue key (e.g., PROJ-123)"},
+                    "issue_key": {
+                        "type": "string",
+                        "description": "The issue key (e.g., PROJ-123)",
+                    },
                     "fields": {"type": "object", "description": "Fields to update"},
                 },
                 "required": ["issue_key", "fields"],
@@ -82,7 +92,10 @@ async def list_tools() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "issue_key": {"type": "string", "description": "The issue key (e.g., PROJ-123)"},
+                    "issue_key": {
+                        "type": "string",
+                        "description": "The issue key (e.g., PROJ-123)",
+                    },
                     "comment": {"type": "string", "description": "Comment text"},
                 },
                 "required": ["issue_key", "comment"],
@@ -102,7 +115,10 @@ async def list_tools() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "issue_key": {"type": "string", "description": "The issue key (e.g., PROJ-123)"},
+                    "issue_key": {
+                        "type": "string",
+                        "description": "The issue key (e.g., PROJ-123)",
+                    },
                     "transition_id": {"type": "string", "description": "Transition ID"},
                 },
                 "required": ["issue_key", "transition_id"],
@@ -122,12 +138,13 @@ async def list_tools() -> list[Tool]:
     ]
 
 
-@server.call_tool()
+@server.call_tool()  # type: ignore[untyped-decorator]
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Handle tool calls."""
     jira = get_client()
 
     try:
+        result: dict[str, Any] | list[dict[str, Any]]
         if name == "get_issue":
             result = await jira.get_issue(arguments["issue_key"])
         elif name == "search_issues":
@@ -162,19 +179,17 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         return [TextContent(type="text", text=f"Error: {str(e)}")]
 
 
-def main() -> None:
+async def amain() -> None:
     """Run the MCP server."""
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(read_stream, write_stream, server.create_initialization_options())
+
+
+def main() -> None:
+    """Entry point for the server."""
     import asyncio
 
-    async def run() -> None:
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(
-                read_stream,
-                write_stream,
-                server.create_initialization_options()
-            )
-
-    asyncio.run(run())
+    asyncio.run(amain())
 
 
 if __name__ == "__main__":
