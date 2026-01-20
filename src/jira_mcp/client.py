@@ -1,6 +1,6 @@
 """Jira API client wrapper."""
 
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -32,7 +32,7 @@ class JiraClient:
                 auth=self._auth,
             )
             response.raise_for_status()
-            return response.json()
+            return cast(dict[str, Any], response.json())
 
     async def search_issues(self, jql: str, max_results: int = 50) -> dict[str, Any]:
         """Search issues using JQL."""
@@ -44,9 +44,11 @@ class JiraClient:
                 params={"jql": jql, "maxResults": max_results},
             )
             response.raise_for_status()
-            return response.json()
+            return cast(dict[str, Any], response.json())
 
-    async def create_issue(self, project_key: str, summary: str, issue_type: str, description: str | None = None) -> dict[str, Any]:
+    async def create_issue(
+        self, project_key: str, summary: str, issue_type: str, description: str | None = None
+    ) -> dict[str, Any]:
         """Create a new Jira issue."""
         payload: dict[str, Any] = {
             "fields": {
@@ -59,7 +61,9 @@ class JiraClient:
             payload["fields"]["description"] = {
                 "type": "doc",
                 "version": 1,
-                "content": [{"type": "paragraph", "content": [{"type": "text", "text": description}]}]
+                "content": [
+                    {"type": "paragraph", "content": [{"type": "text", "text": description}]}
+                ],
             }
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -70,7 +74,7 @@ class JiraClient:
                 json=payload,
             )
             response.raise_for_status()
-            return response.json()
+            return cast(dict[str, Any], response.json())
 
     async def update_issue(self, issue_key: str, fields: dict[str, Any]) -> None:
         """Update a Jira issue."""
@@ -89,7 +93,7 @@ class JiraClient:
             "body": {
                 "type": "doc",
                 "version": 1,
-                "content": [{"type": "paragraph", "content": [{"type": "text", "text": comment}]}]
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": comment}]}],
             }
         }
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -100,7 +104,35 @@ class JiraClient:
                 json=payload,
             )
             response.raise_for_status()
-            return response.json()
+            return cast(dict[str, Any], response.json())
+
+    async def get_comments(
+        self, issue_key: str, start_at: int = 0, max_results: int = 50
+    ) -> dict[str, Any]:
+        """Get comments for an issue with pagination support.
+
+        Args:
+            issue_key: The issue key (e.g., PROJ-123)
+            start_at: The index of the first item to return (default: 0)
+            max_results: The maximum number of items to return (default: 50)
+
+        Returns:
+            dict containing:
+            - startAt: Index of the first returned item
+            - maxResults: Maximum items per page
+            - total: Total number of comments
+            - isLast: Whether this is the last page
+            - values: List of comment objects
+        """
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.get(
+                f"{self.base_url}/rest/api/3/issue/{issue_key}/comment",
+                headers=self._get_headers(),
+                auth=self._auth,
+                params={"startAt": start_at, "maxResults": max_results},
+            )
+            response.raise_for_status()
+            return cast(dict[str, Any], response.json())
 
     async def get_projects(self) -> list[dict[str, Any]]:
         """Get all accessible projects."""
@@ -111,7 +143,7 @@ class JiraClient:
                 auth=self._auth,
             )
             response.raise_for_status()
-            return response.json()
+            return cast(list[dict[str, Any]], response.json())
 
     async def transition_issue(self, issue_key: str, transition_id: str) -> None:
         """Transition an issue to a new status."""
@@ -133,4 +165,4 @@ class JiraClient:
                 auth=self._auth,
             )
             response.raise_for_status()
-            return response.json()
+            return cast(dict[str, Any], response.json())
